@@ -1,0 +1,117 @@
+version: '3'
+
+networks:
+  dev-engine:
+    driver: bridge
+
+services:
+    webserver:
+        build:
+            context: ./php
+        container_name: apache-server
+        restart: unless-stopped
+        volumes:
+            - ../lumbung:/var/www/lumbung.oo
+            - ../sikem:/var/www/sikem.oo
+            - ./php/config/php.ini:/usr/local/etc/php/php.ini
+            - ./php/ports.conf:/etc/apache2/ports.conf
+            - ./php/vhosts:/etc/apache2/sites-enabled
+            - ./docker-data/log/apache2:/var/log/apache2
+        networks:
+            - dev-engine
+
+    php-fpm:
+        build:
+            context: ./php-fpm
+        container_name: php-fpm-server
+        volumes:
+            - ../lumbung:/var/www/lumbung.oo
+            - ../sikem:/var/www/sikem.oo
+            - ./php/config/php.ini:/usr/local/etc/php/php.ini
+        expose:
+            - "9000"
+        networks:
+            - dev-engine
+
+    mariadb:
+        image: mariadb:10.4.13
+        container_name: mariadb-server
+        restart: unless-stopped
+        ports:
+            - 3306:3306
+        volumes:
+            - ./docker-data/data/mysql:/var/lib/mysql
+            - ./docker-data/log/mysql:/var/log/mysql
+        environment:
+            MYSQL_USER: default
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: secret
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        networks:
+            - dev-engine
+
+    ## Phpmyadmin service
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: 'phpmyadmin'
+        links:
+            - mariadb
+        environment:
+            PMA_HOST: mariadb
+            PMA_PORT: 3306
+            MYSQL_ROOT_PASSWORD: secret
+            MYSQL_USER: default
+            MYSQL_PASSWORD: secret
+        ports:
+            - 7070:80
+        volumes: 
+            - /sessions
+            - ./php/config/php.ini:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
+        networks:
+            - dev-engine
+
+    mongodb:
+        image: mongo:4.2
+        container_name: mongodb-server
+        restart: unless-stopped
+        volumes:
+            - ./docker-data/data/mongodb:/data/db
+            - ./docker-data/log/mongodb:/var/log/mongodb
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: secret
+        ports:
+            - "27017-27019:27017-27019"
+        networks:
+            - dev-engine
+
+    ## Nginx for webserver
+    nginx:
+        build:
+            context: ./nginx
+        container_name: nginx-server
+        restart: unless-stopped
+        volumes:
+            - ./nginx/sites:/etc/nginx/sites-available
+            - ./docker-data/log/nginx:/var/log/nginx
+            - ./nginx/ssl:/etc/nginx/ssl
+            - ./docker-data/certbot/conf:/etc/letsencrypt
+            - ./docker-data/certbot/www:/var/www/certbot
+        ports:
+            - 80:80
+            - 443:443
+        depends_on:
+            - php-fpm
+        links:
+            - php-fpm
+        networks:
+            - dev-engine
+
+    redis:
+        image: redis:latest
+        container_name: 'redis'
+        ports:
+            - 6379:6379
+        networks:
+            - dev-engine
