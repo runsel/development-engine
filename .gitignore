@@ -1,0 +1,6 @@
+/docker-data
+/php
+
+.DS_Store
+.idea
+.env
