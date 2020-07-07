@@ -13,7 +13,7 @@ RUN apt-get -y update --fix-missing && \
 
 # Install useful tools and install important libaries
 RUN apt-get -y update && \
-    apt-get -y --no-install-recommends install nano wget dialog curl libsqlite3-dev libsqlite3-0 && \
+    apt-get -y --no-install-recommends install nano wget dialog curl net-tools procps libsqlite3-dev libsqlite3-0 && \
     apt-get -y --no-install-recommends install mariadb-client zlib1g-dev libzip-dev libicu-dev && \
     apt-get -y --no-install-recommends install --fix-missing apt-utils build-essential git curl && \ 
     apt-get -y --no-install-recommends install --fix-missing libssl-dev libcurl4-openssl-dev zip openssl && \
@@ -63,6 +63,10 @@ RUN apt-get -y update && \
     docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && \
     docker-php-ext-install -j$(nproc) gd
 
+# Copy config file
+COPY ./config/php-fpm.ini /usr/local/etc/php/conf.d
+COPY ./config/docker.pool.conf /usr/local/etc/php-fpm.d/
+
 # Configure non-root user.
 ARG PUID=1000
 ENV PUID ${PUID}
@@ -74,6 +78,9 @@ RUN groupmod -o -g ${PGID} www-data && \
 
 # Set working directory
 WORKDIR /var/www
+
+# Set user
+USER www-data
 
 # Expose port 9000 and start php-fpm server
 CMD ["php-fpm"]

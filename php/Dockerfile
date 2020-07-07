@@ -66,5 +66,8 @@ RUN apt-get -y update && \
 # Enable apache modules
 RUN a2enmod rewrite headers
 
+# Set working directory
+WORKDIR /var/www
+
 # Cleanup
 RUN rm -rf /usr/src/*

@@ -5,21 +5,6 @@ networks:
     driver: bridge
 
 services:
-    webserver:
-        build:
-            context: ./php
-        container_name: apache-server
-        restart: unless-stopped
-        volumes:
-            - ../lumbung:/var/www/lumbung.oo
-            - ../sikem:/var/www/sikem.oo
-            - ./php/config/php.ini:/usr/local/etc/php/php.ini
-            - ./php/ports.conf:/etc/apache2/ports.conf
-            - ./php/vhosts:/etc/apache2/sites-enabled
-            - ./docker-data/log/apache2:/var/log/apache2
-        networks:
-            - dev-engine
-
     php-fpm:
         build:
             context: ./php-fpm
@@ -27,12 +12,15 @@ services:
         volumes:
             - ../lumbung:/var/www/lumbung.oo
             - ../sikem:/var/www/sikem.oo
-            - ./php/config/php.ini:/usr/local/etc/php/php.ini
+            - ../html:/var/www/html.oo
+            - ./php/config/php-7.3.ini:/usr/local/etc/php/php.ini
+        tty: true
         expose:
             - "9000"
         networks:
             - dev-engine
 
+    ## Mariadb for sql database
     mariadb:
         image: mariadb:10.4.13
         container_name: mariadb-server
@@ -65,7 +53,7 @@ services:
             MYSQL_PASSWORD: secret
         ports:
             - 7070:80
-        volumes: 
+        volumes:
             - /sessions
             - ./php/config/php.ini:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
         networks:
@@ -93,11 +81,15 @@ services:
         container_name: nginx-server
         restart: unless-stopped
         volumes:
+            - ../lumbung:/var/www/lumbung.oo
+            - ../sikem:/var/www/sikem.oo
+            - ../html:/var/www/html.oo
             - ./nginx/sites:/etc/nginx/sites-available
             - ./docker-data/log/nginx:/var/log/nginx
             - ./nginx/ssl:/etc/nginx/ssl
             - ./docker-data/certbot/conf:/etc/letsencrypt
             - ./docker-data/certbot/www:/var/www/certbot
+        tty: true
         ports:
             - 80:80
             - 443:443
